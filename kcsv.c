@@ -1,27 +1,29 @@
 
-/* Kompressed CSV (comma sep value) file
-   Compressor/Decompressor
+/* Kompressed CSV (comma sep value) file Compressor/Decompressor
    Accumulates blocks of data,
    Finds mean of min and for each channel
-   re-transmits 8-bit codes instead of 32-bit floats or 8-character ascii strings
-   codes in range of 0x00 - 0xEF (0-239)
+   re-transmits 8-bit codes instead of 32-bit floats or ascii strings
+   kompressed number codes in range of 0x00 - 0xEF (0-239)
+   control codes in range of 240-255
+   This results in less than 0.5% error, or ~-46 dB dynamic range or 7.5 bits
 
    Embedded control codes:
-   F0 Block Header
+   F0 00 Block Header
    F1 Row Header
-
 */
 
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <unistd.h>  // don't use for microcontrollers?
 
 #include "kcsv.h"
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
+// Compressor side ----------------------------------------------------------------------
 bool Channel_init( Channel *p_ch, uint16_t len )
 {
   bool ret_val = true;
@@ -52,6 +54,9 @@ bool Block_init( Block *p_block, uint8_t nch, uint16_t len )
 {
   p_block->nch = nch;
   p_block->len = len;
+  p_block->mode = BLK_HDR_ASCII;
+  //p_block->mode = BLK_HDR_BINARY;
+  
   uint8_t idx;
   bool ret_val = true;
   bool ret_val_local = true;
@@ -104,21 +109,57 @@ void Block_calc( Block *p_block )
 
 }
 
+void float2bin( float val, uint8_t *str )
+{
+  str[ 0 ] = ( ( (uint32_t)val ) >> 24 ) & 0xff;
+  str[ 1 ] = ( ( (uint32_t)val ) >> 16 ) & 0xff;
+  str[ 2 ] = ( ( (uint32_t)val ) >>  8 ) & 0xff;
+  str[ 3 ] = ( ( (uint32_t)val )       ) & 0xff;
+}
+
+void uint16_t2bin( uint16_t val, uint8_t *str )
+{
+  str[ 0 ] = ( val >>  8 ) & 0xff;
+  str[ 1 ] = ( val       ) & 0xff;
+}
+
 void Block_header_emit( Block *p_block )
 {
   uint8_t ch;
-
-  printf("F0 ");
-  printf("00 ");
-  printf("%04x ",p_block->len );
-  printf("%02x ",p_block->nch );
+  char buf[ 4 ]; // 4 byte float or less
+  
+  switch( p_block->mode )
+  {
+  case BLK_HDR_ASCII:
+    printf( "F0 00 " );
+    printf( "%04x ", p_block->len );
+    printf( "%02x ", p_block->nch );
+    break;
+  case BLK_HDR_BINARY:
+    buf[ 0 ] = BLK_HDR;
+    buf[ 1 ] = BLK_HDR_CMD_00;
+    write( 1, buf, 2 );
+    float2bin(    p_block->len, buf );  write( 1, buf, 4 );
+    uint16_t2bin( p_block->nch, buf );  write( 1, buf, 4 );
+    break;
+  }
+  
   for( ch = 0; ch < p_block->nch; ch++ )
   {
-    printf("%f, ", p_block->p_channel[ ch ]->min );
-    printf("%f, ", p_block->p_channel[ ch ]->range );
+    switch( p_block->mode )
+    {
+    case BLK_HDR_ASCII:
+      printf("%f, ", p_block->p_channel[ ch ]->min );
+      printf("%f, ", p_block->p_channel[ ch ]->range );
+    break;
+    case BLK_HDR_BINARY:
+      float2bin( p_block->p_channel[ ch ]->min, buf ); write( 1, buf, 4 );
+      float2bin( p_block->p_channel[ ch ]->range, buf ); write( 1, buf, 4 );
+    break;
+    }
   }
-  printf("\n");
-  
+
+  if( p_block->mode == BLK_HDR_ASCII ){ printf("\n"); }
 }
 
 // e.g. min = 10, max = 20 -> range = 10
@@ -132,8 +173,10 @@ void Block_row_emit( Block *p_block, uint16_t row )
   float kval;
   uint8_t kval_uint;
   Channel *p_ch;
+  char buf[ 4 ];
   
-  printf( "F1 ");
+  if(p_block->mode==BLK_HDR_ASCII ){ printf( "F1 " ); }
+  if(p_block->mode==BLK_HDR_BINARY){ fputc( ROW_HDR, stdout ); }
   for( ch = 0; ch < p_block->nch; ch++ )
   {
     p_ch = p_block->p_channel[ ch ]; 
@@ -141,8 +184,24 @@ void Block_row_emit( Block *p_block, uint16_t row )
     val2 = ( val - p_ch->min ) / p_ch->range;
     kval = 239.4999f * val2;
     kval_uint = kval;
-    printf("%02x", kval_uint );
+    
+    switch( p_block->mode )
+    {
+    case BLK_HDR_ASCII:
+      printf("%02x ", kval_uint );
+    break;
+    case BLK_HDR_BINARY:
+      fputc( kval_uint, stdout );
+    break;
+    }
+
+
   }
-  printf( "\n" );
+  if( p_block->mode == BLK_HDR_ASCII ){ printf("\n"); }
   
 }
+
+
+
+
+// Uncompressor side ----------------------------------------------------------------------

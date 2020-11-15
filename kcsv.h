@@ -1,8 +1,9 @@
 
 #define MAX_CHANNELS ( 30 )
 
-#define BLK_HDR ( 0xF0 )
-#define ROW_HDR ( 0xF1 )
+#define BLK_HDR        ( 0xF0 )
+#define BLK_HDR_CMD_00 ( 0x00 )
+#define ROW_HDR        ( 0xF1 )
 
 // Channel ----------------
 typedef struct
@@ -17,8 +18,16 @@ void Channel_calc( Channel *p_ch, uint16_t len );
 
 
 // Block --------------
+enum {
+  BLK_HDR_ASCII = 1,
+  BLK_HDR_BINARY,
+};
+
 typedef struct
 {
+  // mode
+  uint8_t mode;
+  
   // params
   uint16_t len;
   uint8_t  nch;
