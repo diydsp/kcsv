@@ -58,7 +58,7 @@ bool block_rcv_byte( Block *p_block, uint8_t by )
     {
       bin2float( &p_block->rcv_buf[ 5 + 8 * ch     ], &range );
       bin2float( &p_block->rcv_buf[ 5 + 8 * ch + 4 ], &min   );
-      printf( "range, min: %f, %f\n", range, min );
+      printf( "\nrange, min: %f, %f. ", range, min );
     }
     ret_val = true;  // done
   }
@@ -111,37 +111,35 @@ int main( int argc, char *argv[] )
 
     if( escaped == false )
     {
-      // look for Fx commands
-      switch( by )
+      if( by == 0xFF )
       {
-      case BLK_HDR:  // F0
-	kcsv_state_next = KCSV_BLK;
-	process_byte = block_rcv_byte;
-	block_rcv_init( &block );
-      break;
-      case ROW_HDR:  // F1
-	kcsv_state_next = KCSV_ROW;
-	process_byte = row_rcv_byte;
-	row_rcv_init( &block );
-      break;
+	escaped = true;
+      } else
+      {
+	// look for Fx commands
+	switch( by )
+	{
+	case BLK_HDR:  // F0
+	  kcsv_state_next = KCSV_BLK;
+	  process_byte = block_rcv_byte;
+	  block_rcv_init( &block );
+	break;
+	case ROW_HDR:  // F1
+	  kcsv_state_next = KCSV_ROW;
+	  process_byte = row_rcv_byte;
+	  row_rcv_init( &block );
+	break;
+	}
+	kcsv_state_cur = kcsv_state_next;
+	process_byte( &block, by ); // run current interpreter
       }
-
-      kcsv_state_cur = kcsv_state_next;
-      process_byte( &block, by ); // run current interpreter
-
     }
     else
     {
-      if( by == 0xff )
-      {
-       escaped = true;
-      } else
-      {
-	process_byte( &block, by ); // run current interpreter      
-      }
+      process_byte( &block, by ); // run current interpreter
+      escaped = false;
     }
   }
-
 
   return 0;
 }

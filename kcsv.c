@@ -144,10 +144,10 @@ void bin2uint16_t( uint8_t *str, uint16_t *p_val )
 
 void float2bin( float val, uint8_t *str )
 {
-  str[ 0 ] = ( ( (uint32_t)val ) >> 24 ) & 0xff;
-  str[ 1 ] = ( ( (uint32_t)val ) >> 16 ) & 0xff;
-  str[ 2 ] = ( ( (uint32_t)val ) >>  8 ) & 0xff;
-  str[ 3 ] = ( ( (uint32_t)val )       ) & 0xff;
+  str[ 0 ] = ( ( *(uint32_t*)&val ) >> 24 ) & 0xff;
+  str[ 1 ] = ( ( *(uint32_t*)&val ) >> 16 ) & 0xff;
+  str[ 2 ] = ( ( *(uint32_t*)&val ) >>  8 ) & 0xff;
+  str[ 3 ] = ( ( *(uint32_t*)&val )       ) & 0xff;
 }
 
 void uint16_t2bin( uint16_t val, uint8_t *str )
