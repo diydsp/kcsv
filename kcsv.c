@@ -109,6 +109,39 @@ void Block_calc( Block *p_block )
 
 }
 
+void Block_pretty_print( Block *p_block )
+{
+  uint8_t ch;
+  Channel *p_chan;
+  
+  printf("len: %d, nch: %d\n", p_block->len, p_block->nch );
+  for( ch = 0; ch < p_block->nch; ch++ )
+  {
+    p_chan = p_block->p_channel[ ch ];
+    printf("range, min: %f, %f\n", p_chan->range, p_chan->min );
+  }
+}
+
+void bin2float(     uint8_t *str, float    *p_val )
+{
+  uint32_t val;
+  
+  val =
+    ( str[ 0 ] << 24 ) |
+    ( str[ 1 ] << 16 ) |
+    ( str[ 2 ] <<  8 ) |
+    ( str[ 3 ]       );
+
+  *p_val = (float)val;
+}
+
+void bin2uint16_t( uint8_t *str, uint16_t *p_val )
+{
+  uint16_t val;
+  val = str[ 0 ] * 256 + str[ 1 ];
+  *p_val = val;
+}
+
 void float2bin( float val, uint8_t *str )
 {
   str[ 0 ] = ( ( (uint32_t)val ) >> 24 ) & 0xff;
@@ -149,12 +182,12 @@ void Block_header_emit( Block *p_block )
     switch( p_block->mode )
     {
     case BLK_HDR_ASCII:
-      printf("%f, ", p_block->p_channel[ ch ]->min );
       printf("%f, ", p_block->p_channel[ ch ]->range );
+      printf("%f, ", p_block->p_channel[ ch ]->min );
     break;
     case BLK_HDR_BINARY:
-      float2bin( p_block->p_channel[ ch ]->min, buf ); write( 1, buf, 4 );
       float2bin( p_block->p_channel[ ch ]->range, buf ); write( 1, buf, 4 );
+      float2bin( p_block->p_channel[ ch ]->min, buf ); write( 1, buf, 4 );
     break;
     }
   }

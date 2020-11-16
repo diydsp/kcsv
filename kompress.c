@@ -11,11 +11,14 @@
 void gen_sigs( uint8_t num_test_chans, float *p_out )
 {
   // test signal parameters
-  float Fs = 1000.0f; // sample frequency, Hz
+  //float Fs = 1000.0f; // sample frequency, Hz
+  float Fs = 12.0f; // sample frequency, Hz
 
+  //float freq [ MAX_CHANNELS ] = { 5.0, 5.0, 5.0, 5.0 };
+  //float mag  [ MAX_CHANNELS ] = { 1.0,2.0,3.0,4.0 };
   float freq [ MAX_CHANNELS ] = { 5.0, 6.0, 7.0, 8.0 };
+  float mag  [ MAX_CHANNELS ] = { 1.0,1.0,1.0,1.0 };
   static float phase[ MAX_CHANNELS ] = { 0,0,0,0};
-         float mag  [ MAX_CHANNELS ] = { 1.0,2.0,3.0,4.0 };
 
   uint8_t idx;
   for( idx = 0; idx < num_test_chans; idx++ )
@@ -53,14 +56,15 @@ int main( int argc, char *argv[] )
     {
       Block_set_val( &block, idx, out[ idx ] );
     }
-
+    
     // if done, emit kompressed block
     block_done = Block_next_row( &block );
     if( block_done )
     {
       Block_calc( &block );
+      Block_pretty_print( &block );
       Block_header_emit( &block );
-      for( idx = 0; idx < block.nch; idx++ )
+      for( idx = 0; idx < block.len; idx++ )
       {
 	Block_row_emit( &block, idx );
       }

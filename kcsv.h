@@ -34,7 +34,9 @@ typedef struct
 
   // active part
   Channel *p_channel[ MAX_CHANNELS ];
-  uint16_t row;
+  uint16_t row;  // receive
+  uint16_t rcv_byte_idx;
+  uint8_t rcv_buf[ 1000 ]; // todo calc actual number
   
 } Block;
 
@@ -45,3 +47,11 @@ bool Block_next_row( Block *p_block );
 void Block_calc( Block *p_block );
 void Block_header_emit( Block *p_block );
 void Block_row_emit( Block *p_block, uint16_t row );
+void Block_pretty_print( Block *p_block );
+
+// utilities
+void float2bin(    float    val, uint8_t  *str   );
+void uint16_t2bin( uint16_t val, uint8_t  *str   );
+
+void bin2float(    uint8_t *str, float    *p_val );
+void bin2uint16_t( uint8_t *str, uint16_t *p_val );
