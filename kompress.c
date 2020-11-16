@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
-#include <math.h>
+#include <math.h>  // only used for test sig gen
 
 #include "kcsv.h"
 
@@ -16,7 +17,7 @@ void gen_sigs( uint8_t num_test_chans, float *p_out )
 
   //float freq [ MAX_CHANNELS ] = { 5.0, 5.0, 5.0, 5.0 };
   //float mag  [ MAX_CHANNELS ] = { 1.0,2.0,3.0,4.0 };
-  float freq [ MAX_CHANNELS ] = { 5.0, 6.0, 7.0, 8.0 };
+  float freq [ MAX_CHANNELS ] = { 0.3, 6.0, 7.0, 8.0 };
   float mag  [ MAX_CHANNELS ] = { 1.0,1.0,1.0,1.0 };
   static float phase[ MAX_CHANNELS ] = { 0,0,0,0};
 
@@ -34,7 +35,7 @@ int main( int argc, char *argv[] )
   Block block;
   bool ret_val;
   bool block_done;
-
+  
   uint8_t idx;
   float out[ MAX_CHANNELS ];
 
@@ -43,6 +44,11 @@ int main( int argc, char *argv[] )
 
   ret_val = Block_init( &block, num_test_chans, 10 );
   if( ret_val == false ){ return -1; }
+
+  if( 2 == argc )
+  {
+    if( !strcmp( argv[ 1 ], "-b" ) ){ block.mode = BLK_HDR_BINARY; }
+  }
   
   Block_start( &block );
 
@@ -62,8 +68,10 @@ int main( int argc, char *argv[] )
     if( block_done )
     {
       Block_calc( &block );
-      Block_pretty_print( &block );
+      if( block.mode == BLK_HDR_ASCII ){ Block_pretty_print( &block ); }
       Block_header_emit( &block );
+      //exit(0);
+      
       for( idx = 0; idx < block.len; idx++ )
       {
 	Block_row_emit( &block, idx );

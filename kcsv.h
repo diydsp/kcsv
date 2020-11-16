@@ -55,3 +55,6 @@ void uint16_t2bin( uint16_t val, uint8_t  *str   );
 
 void bin2float(    uint8_t *str, float    *p_val );
 void bin2uint16_t( uint8_t *str, uint16_t *p_val );
+
+void esc_put( uint8_t *buf, uint8_t len );
+void esc_putc( uint8_t by );

@@ -132,7 +132,7 @@ void bin2float(     uint8_t *str, float    *p_val )
     ( str[ 2 ] <<  8 ) |
     ( str[ 3 ]       );
 
-  *p_val = (float)val;
+  *p_val = *(float*)&val;
 }
 
 void bin2uint16_t( uint8_t *str, uint16_t *p_val )
@@ -156,11 +156,36 @@ void uint16_t2bin( uint16_t val, uint8_t *str )
   str[ 1 ] = ( val       ) & 0xff;
 }
 
+void esc_put( uint8_t *buf, uint8_t len )
+{
+  uint8_t idx;
+  for( idx = 0; idx < len; idx ++ )
+  {
+    esc_putc( buf[ idx ] );
+  }
+}
+
+void esc_putc( uint8_t by )
+{
+  uint8_t buf;
+  
+  if( ( by >= 0xf0 ) && ( by <= 0xff ) )
+  {
+    buf = 0xff;
+    putc( buf, stdout );
+    //write( 1, buf, 1 );
+  }
+  putc( by, stdout );
+  //write( 1, &by, 1 );
+    
+}
+
 void Block_header_emit( Block *p_block )
 {
   uint8_t ch;
-  char buf[ 4 ]; // 4 byte float or less
-  
+  uint8_t buf[ 4 ]; // 4 byte float or less
+
+  // header descriptor
   switch( p_block->mode )
   {
   case BLK_HDR_ASCII:
@@ -169,25 +194,27 @@ void Block_header_emit( Block *p_block )
     printf( "%02x ", p_block->nch );
     break;
   case BLK_HDR_BINARY:
-    buf[ 0 ] = BLK_HDR;
-    buf[ 1 ] = BLK_HDR_CMD_00;
-    write( 1, buf, 2 );
-    float2bin(    p_block->len, buf );  write( 1, buf, 4 );
-    uint16_t2bin( p_block->nch, buf );  write( 1, buf, 4 );
+    buf[ 0 ] = BLK_HDR;         putc( buf[ 0 ], stdout );  // note commands not escaped!
+    buf[ 1 ] = BLK_HDR_CMD_00;  esc_putc( buf[ 1 ] );
+    uint16_t2bin(    p_block->len, buf ); esc_put( buf, 2 );
+    buf[ 0 ] = p_block->nch;              esc_put( buf, 1 );
     break;
   }
-  
+
+  // header parameters
   for( ch = 0; ch < p_block->nch; ch++ )
   {
     switch( p_block->mode )
     {
     case BLK_HDR_ASCII:
-      printf("%f, ", p_block->p_channel[ ch ]->range );
-      printf("%f, ", p_block->p_channel[ ch ]->min );
+      printf("%f",                    p_block->p_channel[ ch ]->range );
+      printf("(%08x), ", *(uint32_t*)&p_block->p_channel[ ch ]->range );
+      printf("%f",                    p_block->p_channel[ ch ]->min   );
+      printf("(%08x). ", *(uint32_t*)&p_block->p_channel[ ch ]->min   );
     break;
     case BLK_HDR_BINARY:
-      float2bin( p_block->p_channel[ ch ]->range, buf ); write( 1, buf, 4 );
-      float2bin( p_block->p_channel[ ch ]->min, buf ); write( 1, buf, 4 );
+      float2bin( p_block->p_channel[ ch ]->range, buf ); esc_put( buf, 4 );
+      float2bin( p_block->p_channel[ ch ]->min,   buf ); esc_put( buf, 4 );
     break;
     }
   }
@@ -207,9 +234,15 @@ void Block_row_emit( Block *p_block, uint16_t row )
   uint8_t kval_uint;
   Channel *p_ch;
   char buf[ 4 ];
-  
-  if(p_block->mode==BLK_HDR_ASCII ){ printf( "F1 " ); }
-  if(p_block->mode==BLK_HDR_BINARY){ fputc( ROW_HDR, stdout ); }
+
+  // row header descriptor
+  switch( p_block->mode )
+  {
+  case BLK_HDR_ASCII:  printf( "F1 " ); break;
+  case BLK_HDR_BINARY: fputc( ROW_HDR, stdout ); // note cmd not escaped.
+  }
+
+  // row data
   for( ch = 0; ch < p_block->nch; ch++ )
   {
     p_ch = p_block->p_channel[ ch ]; 
@@ -224,10 +257,9 @@ void Block_row_emit( Block *p_block, uint16_t row )
       printf("%02x ", kval_uint );
     break;
     case BLK_HDR_BINARY:
-      fputc( kval_uint, stdout );
+      esc_putc( kval_uint );
     break;
     }
-
 
   }
   if( p_block->mode == BLK_HDR_ASCII ){ printf("\n"); }
