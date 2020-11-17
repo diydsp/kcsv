@@ -72,21 +72,43 @@ void row_rcv_init( Block *p_block )
   printf("\n");
 }
 
+float decode_byte( Channel *p_ch, uint8_t by )
+{
+  float fp_val;
+
+  //fp_val = p_ch->min + p_ch->range * (float)by / (float)0xEF;  // EF is max val
+  fp_val = p_ch->min + (float)by / (float)0xEF;  // EF is max val
+
+  return fp_val;
+}
+
+
+// byte      [f1][byte0][byte1][byte2][byte3]...[byte nch-1]
+// rcv_idx:  0    1     2      3       4     ... nch+1
 bool row_rcv_byte( Block *p_block, uint8_t by )
 {
-  bool ret_val = false;
-  int32_t buf_end_idx;
-  uint8_t ch;
-  float range, min;
-
+  bool     ret_val = false;
+  int32_t  buf_end_idx;
+  uint8_t  ch;
+  float    range, min;
+  Channel *p_chan;
+  float    decoded;
+  
   // add the byte to buf
   p_block->rcv_buf[ p_block->rcv_byte_idx ] = by;
   p_block->rcv_byte_idx++;
 
-  // look for final range, offset pair
-  buf_end_idx = 5 + 8 * p_block->nch;
+  
+  // look for final byte
+  buf_end_idx = 1 + p_block->nch;
   if( p_block->rcv_byte_idx >= buf_end_idx )
   {
+    for( ch = 0; ch < p_block->nch; ch++ )
+    {
+      p_chan = p_block->p_channel[ ch ];
+      decoded = decode_byte( p_chan, p_block->rcv_buf[ 1 + ch ] );
+      printf("%f, ", decoded );
+    }
     printf("row done\n ");
   }
   
