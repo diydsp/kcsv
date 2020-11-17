@@ -7,6 +7,8 @@ simple csv reader for test purposes, not mission-hardeened
 
 #define MAX_LEN ( 1000 )
 
+#include "kcsv.h"
+
 int main( int argc, char *argv[] )
 {
   FILE *fi = fopen( argv[ 1 ], "r" );
