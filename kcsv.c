@@ -55,17 +55,18 @@ bool Block_init( Block *p_block, uint8_t nch, uint16_t len )
   p_block->nch = nch;
   p_block->len = len;
   p_block->mode = BLK_HDR_ASCII;
-  //p_block->mode = BLK_HDR_BINARY;
   
-  uint8_t idx;
+  uint8_t ch;
   bool ret_val = true;
   bool ret_val_local = true;
-  
-  for( idx = 0; idx < len; idx ++)
-  {
-    p_block->p_channel[ idx ] = (Channel *) malloc( sizeof( Channel ) );
 
-    ret_val_local = Channel_init( p_block->p_channel[ idx ], len );
+  // Allocate channel descriptors and buffers
+  for( ch = 0; ch < nch; ch ++)
+  {
+    p_block->p_channel[ ch ] = (Channel *) malloc( sizeof( Channel ) );
+    if( p_block->p_channel[ ch ] == NULL ){ ret_val = false; break; }
+
+    ret_val_local = Channel_init( p_block->p_channel[ ch ], len );
     if( ret_val_local == false ){ ret_val = false; break; }
   }
 

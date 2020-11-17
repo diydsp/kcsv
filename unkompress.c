@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include <math.h>
 
@@ -11,10 +12,23 @@
 
 bool idle( Block *p_block, uint8_t by ){ }
 
-void block_rcv_init( Block *p_block )
+bool block_rcv_init( Block *p_block )
 {
+  uint8_t ch;
+  bool ret_val = true;
+  
+  // allocate channel descriptors
+  for( ch = 0; ch < p_block->nch; ch ++)
+  {
+    p_block->p_channel[ ch ] = (Channel *) malloc( sizeof( Channel ) );
+    if( p_block->p_channel[ ch ] == NULL ){ ret_val = false; break; }
+  }
+
+  // prepare to receive
   p_block->rcv_byte_idx = 0;
+
   printf("\n");
+  return ret_val;
 }
 
 // end after [F0][00][rows1][rows0][# ch][range0-3][offset0-3][range0-3][offset0-3]
@@ -124,7 +138,8 @@ int main( int argc, char *argv[] )
   Block block;
   uint8_t by;
   bool escaped = false;
-  
+  bool ret_val_local = true;
+  int ret_val = 0;
   while( 1 )
   {
     by = getchar();
@@ -144,7 +159,8 @@ int main( int argc, char *argv[] )
 	case BLK_HDR:  // F0
 	  kcsv_state_next = KCSV_BLK;
 	  process_byte = block_rcv_byte;
-	  block_rcv_init( &block );
+	  ret_val_local = block_rcv_init( &block );
+	  if( ret_val_local == false ){ return( -1 ); }
 	break;
 	case ROW_HDR:  // F1
 	  kcsv_state_next = KCSV_ROW;

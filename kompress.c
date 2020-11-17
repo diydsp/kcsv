@@ -17,7 +17,7 @@ void gen_sigs( uint8_t num_test_chans, float *p_out )
 
   //float freq [ MAX_CHANNELS ] = { 5.0, 5.0, 5.0, 5.0 };
   //float mag  [ MAX_CHANNELS ] = { 1.0,2.0,3.0,4.0 };
-  float freq [ MAX_CHANNELS ] = { 0.3, 6.0, 7.0, 8.0 };
+  float freq [ MAX_CHANNELS ] = { 0.3, 0.01, 0.03, 8.0 };
   float mag  [ MAX_CHANNELS ] = { 1.0,1.0,1.0,1.0 };
   static float phase[ MAX_CHANNELS ] = { 0,0,0,0};
 
@@ -40,7 +40,7 @@ int main( int argc, char *argv[] )
   float out[ MAX_CHANNELS ];
 
   uint8_t num_test_chans = 4;
-  uint32_t tr_idx, num_test_rows = 100;
+  uint32_t tr_idx, num_test_rows = 1000;
 
   ret_val = Block_init( &block, num_test_chans, 10 );
   if( ret_val == false ){ return -1; }
